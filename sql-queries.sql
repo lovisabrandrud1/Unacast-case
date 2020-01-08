@@ -57,8 +57,8 @@ select
     gender
 from `bigquery-public-data.new_york_citibike.citibike_trips` t1
 where starttime is not null  --exclude blank rows
---group by gender, year
-order by year desc
+group by gender--, year
+--order by year desc
 
 
 --3. What is the trip duration distribution of Citibike trips?
@@ -91,67 +91,20 @@ group by start_station_name, end_station_name--, usertype
 order by number_of_trips desc
 limit 10
 
---5. Were there new bike stations introduced or removed at any point in time? What makes you think it did or didn’t?
+--5. Were there are new bike stations introduced or removed at any point in time? What makes you think it did or didn’t?
 /* yes, there are both stations coming and going based on the usage. I assume that if there are no trips for more than 14 day
 the station has been removed. Stations can be closed for festivals etc. therefor this limit*/
 
 
 
+----------------------------------------------------------------------------------
 
-
-
-
-
---most popular start stations 2018
-select start_station_name,
-  start_station_latitude,
-  start_station_longitude,
-  extract(year from starttime),
-  COUNT(*) AS num_trips
-from `bigquery-public-data.new_york_citibike.citibike_trips` 
-where extract(year from starttime) = 2018
-group by 
-1,
-2,
-3,
-4
-ORDER BY
-  num_trips DESC
-Limit 10
-
---most popular end stations 2018
-select end_station_name,
-  end_station_latitude,
-  end_station_longitude,
-  extract(year from stoptime),
-  COUNT(*) AS num_trips
-from `bigquery-public-data.new_york_citibike.citibike_trips` 
-where extract(year from stoptime) = 2018
-group by 
-1,
-2,
-3,
-4
-ORDER BY
-  num_trips DESC
-Limit 10
-
-
---Number of trips per start station per year
-select 
-    count(*) as num_of_trips, 
-    start_station_name, 
-    extract(year from starttime) as year, 
-    extract(month from starttime) as month 
-from `bigquery-public-data.new_york_citibike.citibike_trips`
-group by extract(year from starttime), extract(month from starttime),start_station_name
-
-
-
-
---truncate data
+--Truncate data - the 5,8 mill rows with null values have been excluded from the queries above by the following filter: where starttime is not null  --exclude blank rows
 select count(*) from `bigquery-public-data.new_york_citibike.citibike_trips`
 where starttime is null --5 828 994
 
 select count(*) from `bigquery-public-data.new_york_citibike.citibike_trips`
 where starttime is not null --53 108 721
+
+
+
