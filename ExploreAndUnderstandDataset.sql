@@ -1,8 +1,8 @@
 
--- står at datasett oppdateres hver dag, men den siste datoen som ligger inne er 31. mai 2018
+-- It says that the dataset is updated every day but the most recent date is May 31st 2018
 
 --1. What is the most popular start station and end station?
---avg number of trips starting per station per day, assume that only stations that have been open longer than 14 days are representative of demand
+--avg number of trips starting per station per day, I assume that only stations that have been open longer than 14 days are representative of demand
 select 
     count(*)/active_days as avg_num_of_trips_per_day, 
     start_station_name
@@ -22,9 +22,9 @@ where starttime is not null  --exclude blank rows
 group by start_station_name, active_days
 order by avg_num_of_trips_per_day desc 
 limit 10
+/*Answer: 8 Ave & W 31 St with an average of 248 trips starting per day (not taking potential closed day into consideration)*/ 
 
-
---avg number of trips ending per station per day, assume that only stations that have been open longer than 14 days are representative of demand
+--avg number of trips ending per station per day, I assume that only stations that have been open longer than 14 days are representative of demand
 select 
     count(*)/active_days as avg_num_of_trips_per_day, 
     end_station_name
@@ -44,7 +44,7 @@ where stoptime is not null  --exclude blank rows
 group by end_station_name, active_days
 order by avg_num_of_trips_per_day desc 
 limit 10
-
+/*Answer: E 17 St & Broadway with an average of 243 trips ending per day (not taking potential closed day into consideration)*/ 
 
 
 
@@ -59,12 +59,11 @@ from `bigquery-public-data.new_york_citibike.citibike_trips` t1
 where starttime is not null  --exclude blank rows
 group by gender--, year
 --order by year desc
+/*Answer: Approx 24% of all trips are taken by women (assuming we have the same distribution amongst the unknown users as those with known gender)*/ 
 
 
 --3. What is the trip duration distribution of Citibike trips?
 -- Here we could also check the development of duration distribution thorugh time 
--- Plot it as a histogram, alt one per year and compare the shapes
--- Trips between 6-7 minutes are the most popular
 select 
     count(*) as number_of_trips, 
     case when floor(tripduration/60) >= 90 then 90 --cut the tail at 90 minutes
@@ -74,6 +73,8 @@ from `bigquery-public-data.new_york_citibike.citibike_trips`
 where starttime is not null  --exclude blank rows
 group by tripduration_in_minutes
 order by tripduration_in_minutes 
+/*Answer: Trips between 6-7 minutes are the most popular. See presentation for histogram of the distribution*/ 
+
 
 --4. What is the most popular Citibike trip?
 -- this gives the most popular trip in terms of number of trips. Could also look at the avg number of trips per day
@@ -90,6 +91,8 @@ where starttime is not null--exclude blank rows
 group by start_station_name, end_station_name--, usertype
 order by number_of_trips desc
 limit 10
+/*Answer: From Central Park S & 6 Ave to Central Park S & 6 Ave with 55 703 trips*/
+
 
 --5. Were there are new bike stations introduced or removed at any point in time? What makes you think it did or didn’t?
 /* yes, there are both stations coming and going based on the usage. I assume that if there are no trips for more than 14 day
