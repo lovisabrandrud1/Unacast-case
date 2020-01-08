@@ -1,0 +1,216 @@
+NB! This is an unstructured working document for the basis of the presentation
+
+/*Task 2: Insights about areas in NYC
+The task is very open: Imagine being a Data Scientist at either NY Citibikes or e.g. the city of
+New York, and your team lead has asked you to find interesting insights (preferably actionable)
+about areas in NYC. We encourage you to use supplementing data sets to the Citibikes dataset,
+many can be found readily available on BigQuery.
+It can be useful to use geohash, census tracts or another way of grouping the data in
+manageable areas.
+In this task we want you to focus on the presentation. Think of what is the best medium to
+explore the data and explain your findings. During the interview you’ll have 20 minutes to
+present.
+NB: We expect that you use the dataset creatively. All assumptions don’t have to make 100%
+sense but we expect you to be able to describe why you used the data in the way you did.
+
+
+I am for a hypothesis driven approach, not just digging around in data.
+Hypotheses should be based on what they want to acheive on a higher level grounded in a strategy, ensuring that you are actually working in the direction of actionable insights.
+The Hypotheses can then be confirmed or disproved
+
+Here an exmaple could be the nyc government considering adjusting the public transport offer in accordance with the weather
+Or NY citibike looking to improve how they reallocate bikes and have an hyptohesis that weather has great impact 
+- difficult to estimate demand as we have no idea when stations are empty or full
+    - can use nearby stations as proxy
+    - can use same station at other days as proxy 
+- hypotheses, the most popular routes for tourist are more affected by weather than annual subscribers 
+*/
+
+-- Queries for visualizations
+--citibike
+select 
+       extract(year from starttime) as year,
+       extract(month from starttime) as month,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string)) 
+            else cast(extract(hour from starttime) as string) end as hour,
+       cast(floor(extract(minute from starttime)/10)*10 as int64) as minute_interval,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string),".", cast(cast(floor(extract(minute from starttime)/10)*10 as int64) as string))
+            else concat(cast(extract(hour from starttime) as string),".", cast(cast(floor(extract(minute from starttime)/10)*10 as int64) as string)) end as hour_minute,
+       extract(dayofweek from starttime) as weekday,
+       start_station_latitude,
+       start_station_longitude,
+       end_station_latitude,
+       end_station_longitude,
+       usertype,
+       cast(floor((extract(year from starttime) - birth_year)/10)*10 as int64) as age,
+       birth_year,
+       gender,
+       st_geohash(st_geogpoint(start_station_latitude, start_station_longitude)) as geohash_start,
+       st_geohash(st_geogpoint(end_station_latitude, end_station_longitude)) as geohash_end
+from `bigquery-public-data.new_york_citibike.citibike_trips` 
+where starttime is not null  --exclude blank rows
+and extract(year from starttime) in (2017,2018)
+
+--citibike including weather
+select 
+       extract(year from starttime) as year,
+       extract(month from starttime) as month,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string)) 
+            else cast(extract(hour from starttime) as string) end as hour,
+       cast(floor(extract(minute from starttime)/10)*10 as int64) as minute_interval,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string),".", cast(cast(floor(extract(minute from starttime)/10)*10 as int64) as string))
+            else concat(cast(extract(hour from starttime) as string),".", cast(cast(floor(extract(minute from starttime)/10)*10 as int64) as string)) end as hour_minute,
+       extract(dayofweek from starttime) as weekday,
+       start_station_latitude,
+       start_station_longitude,
+       end_station_latitude,
+       end_station_longitude,
+       usertype,
+       cast(floor((extract(year from starttime) - birth_year)/10)*10 as int64) as age,
+       birth_year,
+       gender,
+       st_geohash(st_geogpoint(start_station_latitude, start_station_longitude)) as geohash_start,
+       st_geohash(st_geogpoint(end_station_latitude, end_station_longitude)) as geohash_end,
+       avg_temp,
+       rain_flg,
+       date_valid_std
+from `bigquery-public-data.new_york_citibike.citibike_trips` t
+inner join
+(select 
+  date_valid_std, 
+  case when avg_temperature_air_2m_f < 50 then "<10 degrees" else ">10 degrees" end as avg_temp,
+  case when tot_precipitation_in > 0 then 1 else 0 end as rain_flg
+from `weathersource-com.pub_weather_data_samples.sample_weather_history_us_zipcode_daily_2016`
+where postal_code = "10003" --representative of new york
+order by date_valid_std desc) w
+on cast(starttime as date) = date_valid_std
+
+where starttime is not null  --exclude blank rows
+and extract(year from starttime) in (2016)
+
+
+
+--taxi 
+select 
+       extract(year from pickup_datetime) as year,
+       extract(month from pickup_datetime) as month,
+       case when length(cast(extract(hour from pickup_datetime) as string)) = 1 
+            then concat("0", cast(extract(hour from pickup_datetime) as string)) 
+            else cast(extract(hour from pickup_datetime) as string) end as hour,
+       cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as minute_interval,
+       case when length(cast(extract(hour from pickup_datetime) as string)) = 1 
+            then concat("0", cast(extract(hour from pickup_datetime) as string),".", cast(cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as string))
+            else concat(cast(extract(hour from pickup_datetime) as string),".", cast(cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as string)) end as hour_minute,
+       extract(dayofweek from pickup_datetime) as weekday,
+       passenger_count,
+       "green" as taxi_type
+      --st_geohash(st_geogpoint(longitude, latitude)) as geohash
+from `bigquery-public-data.new_york_taxi_trips.tlc_green_trips_2017` 
+union all 
+select 
+       extract(year from pickup_datetime) as year,
+       extract(month from pickup_datetime) as month,
+       case when length(cast(extract(hour from pickup_datetime) as string)) = 1 
+            then concat("0", cast(extract(hour from pickup_datetime) as string)) 
+            else cast(extract(hour from pickup_datetime) as string) end as hour,
+       cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as minute_interval,
+       case when length(cast(extract(hour from pickup_datetime) as string)) = 1 
+            then concat("0", cast(extract(hour from pickup_datetime) as string),".", cast(cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as string))
+            else concat(cast(extract(hour from pickup_datetime) as string),".", cast(cast(floor(extract(minute from pickup_datetime)/10)*10 as int64) as string)) end as hour_minute,
+       extract(dayofweek from pickup_datetime) as weekday,
+       passenger_count,
+       "yellow" as taxi_type
+      --st_geohash(st_geogpoint(longitude, latitude)) as geohash
+from `bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2017` 
+/*where starttime is not null  --exclude blank rows
+and extract(year from starttime) in (2017,2018)*/
+
+
+/*Map visualization
+
+Assumptions:
+- unlimited supply of bicycles at the stations
+- same number of spaces/comparable stations
+- all stations active all of 2017
+ concept
+ how can we estimate demand with regards to how to move bikes around
+ weather
+ usertype
+ peak times
+ area demands
+ --> map (geoviz) which shows how many bikes we assume will be needed at a specific station within a specific hour, specific day and type of weather
+ improvement: include actual number of bikes at satation at given time, more sophisticated calculation on temperature range (linear regression)
+ other factors (wind, holidays, festivals, etc), estimate of demand at times where the station has been empty (nearby stations, same station and time different day)
+*/
+
+
+select 
+       start_station_name,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string)) 
+            else cast(extract(hour from starttime) as string) end as hour,
+       extract(dayofweek from starttime) as weekday,
+       round(count(*)/count(distinct cast(starttime as date)),1) as number_of_trips_start,
+       st_geogpoint(start_station_longitude, start_station_latitude) as geo_start
+from `bigquery-public-data.new_york_citibike.citibike_trips` 
+where extract(year from starttime) = 2017 --choose year
+and extract(dayofweek from starttime) = 4 --choose weekday
+and extract(hour from starttime) = 18 -- choose hour 18 means all trips between 18 and 19
+group by start_station_latitude, start_station_longitude, hour, weekday, start_station_name
+
+
+select 
+       end_station_name,
+       case when length(cast(extract(hour from stoptime) as string)) = 1 
+            then concat("0", cast(extract(hour from stoptime) as string)) 
+            else cast(extract(hour from stoptime) as string) end as hour,
+       extract(dayofweek from stoptime) as weekday,
+       round(count(*)/count(distinct cast(stoptime as date)),1) as number_of_trips_end,
+       st_geogpoint(end_station_longitude, end_station_latitude) as geo_start
+from `bigquery-public-data.new_york_citibike.citibike_trips` 
+where extract(year from stoptime) = 2017
+and extract(dayofweek from stoptime) = 4
+and extract(hour from stoptime) = 8
+group by end_station_latitude, end_station_longitude, hour, weekday, end_station_name
+
+
+
+select coalesce(start_station_name, end_station_name) as end_station_name,
+        coalesce(s.hour, e.hour) as hour,
+        coalesce(s.weekday, e.weekday) as weekday,
+        coalesce(s.geo_start, e.geo_start) as geo,
+        cast(round(number_of_trips_start - number_of_trips_end) as int64) as net_bike_demand,
+        abs(cast(round(number_of_trips_start - number_of_trips_end) as int64)) as abs_demand
+from 
+(select 
+       start_station_name,
+       case when length(cast(extract(hour from starttime) as string)) = 1 
+            then concat("0", cast(extract(hour from starttime) as string)) 
+            else cast(extract(hour from starttime) as string) end as hour,
+       extract(dayofweek from starttime) as weekday,
+       round(count(*)/count(distinct cast(starttime as date)),1) as number_of_trips_start,
+       st_geogpoint(start_station_longitude, start_station_latitude) as geo_start
+from `bigquery-public-data.new_york_citibike.citibike_trips` 
+where extract(year from starttime) = 2017 --choose year
+and extract(dayofweek from starttime) = 4 --choose weekday
+and extract(hour from starttime) = 8 -- choose hour 18 means all trips between 18 and 19
+group by start_station_latitude, start_station_longitude, hour, weekday, start_station_name) s
+full join 
+(select 
+       end_station_name,
+       case when length(cast(extract(hour from stoptime) as string)) = 1 
+            then concat("0", cast(extract(hour from stoptime) as string)) 
+            else cast(extract(hour from stoptime) as string) end as hour,
+       extract(dayofweek from stoptime) as weekday,
+       round(count(*)/count(distinct cast(stoptime as date)),1) as number_of_trips_end,
+       st_geogpoint(end_station_longitude, end_station_latitude) as geo_start
+from `bigquery-public-data.new_york_citibike.citibike_trips` 
+where extract(year from stoptime) = 2017
+and extract(dayofweek from stoptime) = 4
+and extract(hour from stoptime) = 8
+group by end_station_latitude, end_station_longitude, hour, weekday, end_station_name) e
+on start_station_name = end_station_name
