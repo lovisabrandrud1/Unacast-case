@@ -97,7 +97,23 @@ limit 10
 --5. Were there are new bike stations introduced or removed at any point in time? What makes you think it did or didn’t?
 /* yes, there are both stations coming and going based on the usage. I assume that if there are no trips for more than 14 day
 the station has been removed. Stations can be closed for festivals etc. therefor this limit*/
+select 
+    count(distinct start_station_id) as number_of_stations, 
+    extract(year from starttime) as year
+from `bigquery-public-data.new_york_citibike.citibike_trips`
+where starttime is not null--exclude blank rows
+group by year
+order by year
 
+/*Answer: 
+number_of_stations	year		
+330     2013
+332     2014	
+488     2015	
+643     2016
+798     2017
+788     2018
+*/
 
 
 ----------------------------------------------------------------------------------
